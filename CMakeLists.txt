@@ -19,7 +19,12 @@ set(SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 add_executable(network-monitor ${SOURCES})
 target_compile_features(network-monitor
     PRIVATE
-    cxx_std_11
+    cxx_std_14
+)
+
+target_include_directories(network-monitor
+    PRIVATE
+        src
 )
 
 target_link_libraries(network-monitor
