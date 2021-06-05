@@ -1,12 +1,17 @@
-#include <iostream>
-#include <functional>
+#ifndef WEBSOCKET_CLIENT_H
+#define WEBSOCKET_CLIENT_H
+
 #include <boost/asio.hpp>
 #include <boost/beast.hpp>
 #include <boost/system/error_code.hpp>
 
+#include <functional>
+#include <string>
+
 namespace NetworkMonitor {
 
-
+/*! \brief Client to connect to a WebSocket server over plain TCP.
+ */
 class WebSocketClient {
 public:
     /*! \brief Construct a WebSocket client.
@@ -69,9 +74,43 @@ private:
     std::string url_ {};
     std::string port_ {};
 
+    // We leave these uninitialized because they do not support a default
+    // constructor.
     boost::asio::ip::tcp::resolver resolver_;
     boost::beast::websocket::stream<boost::beast::tcp_stream> ws_;
 
+    boost::beast::flat_buffer rBuffer_ {};
+
+    bool closed_ {true};
+
+    std::function<void (boost::system::error_code)> onConnect_ {nullptr};
+    std::function<void (boost::system::error_code,
+                        std::string&&)> onMessage_ {nullptr};
+    std::function<void (boost::system::error_code)> onDisconnect_ {nullptr};
+
+    void OnResolve(
+        const boost::system::error_code& ec,
+        boost::asio::ip::tcp::resolver::iterator resolverIt
+    );
+
+    void OnConnect(
+        const boost::system::error_code& ec
+    );
+
+    void OnHandshake(
+        const boost::system::error_code& ec
+    );
+
+    void ListenToIncomingMessage(
+        const boost::system::error_code& ec
+    );
+
+    void OnRead(
+        const boost::system::error_code& ec,
+        size_t nBytes
+    );
 };
 
-} 
+} // namespace NetworkMonitor
+
+#endif // WEBSOCKET_CLIENT_H
