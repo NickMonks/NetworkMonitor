@@ -1,8 +1,11 @@
 #ifndef WEBSOCKET_CLIENT_H
 #define WEBSOCKET_CLIENT_H
 
+
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 #include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/system/error_code.hpp>
 
 #include <functional>
@@ -22,11 +25,13 @@ public:
      *  \param port The port on the server.
      *  \param ioc  The io_context object. The user takes care of calling
      *              ioc.run().
+     *  \param ctx The TLS context to setup a TLS socket stream
      */
     WebSocketClient(
         const std::string& url,
         const std::string& port,
-        boost::asio::io_context& ioc
+        boost::asio::io_context& ioc,
+        boost::asio::ssl::context& ctx
     );
 
     /*! \brief Destructor.
@@ -77,7 +82,12 @@ private:
     // We leave these uninitialized because they do not support a default
     // constructor.
     boost::asio::ip::tcp::resolver resolver_;
-    boost::beast::websocket::stream<boost::beast::tcp_stream> ws_;
+
+    // The TCP is wrapped on top of the SSL, which is the NextLayer typename. 
+    boost::beast::websocket::stream<
+        boost::beast::ssl_stream<
+            boost::beast::tcp_stream>
+            > ws_;
 
     boost::beast::flat_buffer rBuffer_ {};
 
@@ -108,6 +118,10 @@ private:
     void OnRead(
         const boost::system::error_code& ec,
         size_t nBytes
+    );
+
+    void OnTlsHandshake(
+        const boost::system::error_code& ec
     );
 };
 

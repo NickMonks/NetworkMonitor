@@ -1,24 +1,39 @@
-#include "websocket-client.h"
+#include <network-monitor/websocket-client.h>
 
 #include <boost/asio.hpp>
+#include <boost/test/unit_test.hpp>
 
-#include <iostream>
 #include <string>
+#include <filesystem>
+
 
 using NetworkMonitor::WebSocketClient;
 
-int main()
+BOOST_AUTO_TEST_SUITE(network_monitor);
+
+BOOST_AUTO_TEST_CASE(class_WebSocketClient)
 {
+    // First of all, check if the TESTS_CACERT_PERM file is found, which contains CA certificates
+    // for our SSL/TLS layer:
+
+    BOOST_CHECK(std::filesystem::exists(TESTS_CACERT_PEM));
+    
     // Connection targets
     const std::string url {"echo.websocket.org"};
-    const std::string port {"80"};
+    // change the port to use TLS
+    const std::string port {"443"};
     const std::string message {"Hello WebSocket"};
+    std::string echo {};
+
+    // Declare a TLS context. Important to notice that we check the cacert_pem here
+    boost::asio::ssl::context ctx {boost::asio::ssl::context::tlsv12_client};
+    ctx.load_verify_file(TESTS_CACERT_PEM);
 
     // Always start with an I/O context object.
     boost::asio::io_context ioc {};
 
     // The class under test
-    WebSocketClient client {url, port, ioc};
+    WebSocketClient client {url, port, ioc, ctx};
 
     // We use these flags to check that the connection, send, receive functions
     // work as expected.
@@ -47,10 +62,11 @@ int main()
                       &onClose,
                       &messageReceived,
                       &messageMatches,
-                      &message](auto ec, auto received) {
+                      &message,
+                      &echo](auto ec, auto received) {
         messageReceived = !ec;
-        messageMatches = message == received;
-        client.Close(onClose);
+        echo = std::move(received);
+       client.Close(onClose);
     }};
 
     // We must call io_context::run for asynchronous callbacks to run.
@@ -60,18 +76,11 @@ int main()
     ioc.run();
 
     // When we get here, the io_context::run function has run out of work to do.
-    bool ok {
-        connected &&
-        messageSent &&
-        messageReceived &&
-        messageMatches &&
-        disconnected
-    };
-    if (ok) {
-        std::cout << "OK" << std::endl;
-        return 0;
-    } else {
-        std::cerr << "Test failed" << std::endl;
-        return 1;
-    }
+    BOOST_CHECK(connected);
+    BOOST_CHECK(messageSent);
+    BOOST_CHECK(messageReceived);
+    BOOST_CHECK(disconnected);
+    BOOST_CHECK_EQUAL(message, echo);
 }
+
+BOOST_AUTO_TEST_SUITE_END();
