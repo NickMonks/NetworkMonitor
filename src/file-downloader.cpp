@@ -46,3 +46,24 @@ bool DownloadFile(
 
 
     }
+
+    nlohmann::json ParseJsonFile(
+        const std::filesystem::path& source
+    )
+    {
+        // create a empty parsed JSON object:
+        nlohmann::json parsed {};
+
+        try {
+            std::ifstream file {source};
+
+            // use overloaded operator >> from nlohmann
+            // will accept a ifstream object:
+            
+            file >> parsed;
+        } catch () {
+            // will return an empty object
+        }
+
+        return parsed
+    }

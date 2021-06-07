@@ -12,6 +12,20 @@ using NetworkMonitor::DownloadFile;
 
 BOOST_AUTO_TEST_SUITE(network_monitor);
 
+BOOST_AUTO_TEST_CASE(parse_file)
+{
+    // Parse the file.
+    const std::filesystem::path sourceFile {TESTS_NETWORK_LAYOUT_JSON};
+    auto parsed = ParseJsonFile(sourceFile);
+    BOOST_CHECK(parsed.is_object());
+    BOOST_CHECK(parsed.contains("lines"));
+    BOOST_CHECK(parsed.at("lines").size() > 0);
+    BOOST_CHECK(parsed.contains("stations"));
+    BOOST_CHECK(parsed.at("stations").size() > 0);
+    BOOST_CHECK(parsed.contains("travel_times"));
+    BOOST_CHECK(parsed.at("travel_times").size() > 0);
+}
+
 BOOST_AUTO_TEST_CASE(file_downloader)
 {
     const std::string fileUrl {
@@ -44,5 +58,6 @@ BOOST_AUTO_TEST_CASE(file_downloader)
         BOOST_CHECK(foundExpectedString);
     }
 
-    
+    // Clean up.
+    std::filesystem::remove(destination);
 }

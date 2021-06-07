@@ -20,6 +20,14 @@ namespace NetworkMonitor {
         const std::filesystem::path& caCertFile = {}
     );
 
+    /*! \brief Parse a local file into a JSON object.
+    *
+    *  \param source The path to the JSON file to load and parse.
+    */
+    nlohmann::json ParseJsonFile(
+        const std::filesystem::path& source
+    );
+
 } // namespace NetworkMonitor
 
 #endif // WEBSOCKET_CLIENT_FILE_DOWNLOADER_H
