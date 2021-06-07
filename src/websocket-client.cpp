@@ -34,11 +34,13 @@ static void Log(const std::string& where, boost::system::error_code ec)
 // so we pass our ssl context
 WebSocketClient::WebSocketClient(
     const std::string& url,
+    const std::string &endpoint,
     const std::string& port,
     boost::asio::io_context& ioc,
     boost::asio::ssl::context& ctx
 ) : url_ {url},
     port_ {port},
+    endpoint_ {endpoint},
     resolver_ {boost::asio::make_strand(ioc)},
     ws_ {boost::asio::make_strand(ioc), ctx}
 {
@@ -163,6 +165,7 @@ void WebSocketClient::OnConnect(
     
 }
 
+
 void WebSocketClient::OnTlsHandshake(
     const boost::system::error_code& ec
 )
@@ -178,7 +181,7 @@ void WebSocketClient::OnTlsHandshake(
 
     // Attempt a websocket handshake
     // Attempt a WebSocket handshake.
-    ws_.async_handshake(url_, "/",
+    ws_.async_handshake(url_, endpoint_,
         [this](auto ec) {
             OnHandshake(ec);
         }
