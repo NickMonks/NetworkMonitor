@@ -1,4 +1,5 @@
 #include <network-monitor/transport-network.h>
+#include <network-monitor/file-downloader.h>
 
 #include <algorithm>
 #include <memory>
@@ -83,7 +84,7 @@ bool TransportNetwork::FromJson(
         Line line {
             std::move(lineJson.at("line_id").get<std::string>()),
             std::move(lineJson.at("name").get<std::string>()),
-            {}, // We will add the routes shortly.
+            {} // We will add the routes shortly.
         };
 
         // reserve size to emplace back ()
@@ -103,16 +104,24 @@ bool TransportNetwork::FromJson(
 
         ok &=AddLine(line);
         if (!ok){
-            throw std::runtime_error("COuld not add line" + line.id);
+            throw std::runtime_error("Could not add line" + line.id);
         }
+    }
+
+    // Finally, set the travel times.
+    for (auto&& travelTimeJson: src.at("travel_times")) {
+        ok &= SetTravelTime(
+            std::move(travelTimeJson.at("start_station_id").get<std::string>()),
+            std::move(travelTimeJson.at("end_station_id").get<std::string>()),
+            std::move(travelTimeJson.at("travel_time").get<unsigned int>())
+        );
+    }
 
     return ok;
 }
 
 
-TransportNetwork::AddStation(
-    const Station& station
-)
+bool TransportNetwork::AddStation(const Station& station)
 {
     // Do not add a station if it's already registered
     if (GetStation(station.id) != nullptr) {
@@ -133,9 +142,7 @@ TransportNetwork::AddStation(
     return true;
 }
 
-bool TransportNetwork::AddLine(
-    const Line& line
-)
+bool TransportNetwork::AddLine(const Line& line)
 {
     if (GetLine(line.id) != nullptr)
     {
@@ -187,20 +194,20 @@ bool TransportNetwork::RecordPassengerEvent(
 
 long long int TransportNetwork::GetPassengerCount(
     const Id& station
-)
+) const
 {
+    // Find the station.
     const auto stationNode {GetStation(station)};
-
-    if (stationNode == nullptr){
-        throw std::runtime_error("Could not find station in the network: " + station);
+    if (stationNode == nullptr) {
+        throw std::runtime_error("Could not find station in the network: " +
+                                 station);
     }
-
     return stationNode->passengerCount;
 }
 
 std::vector<Id> TransportNetwork::GetRoutesServingStation(
     const Id& station
-)
+) const
 {
 
     // Find the station
@@ -255,7 +262,7 @@ bool TransportNetwork::SetTravelTime(
 
     auto setTravelTime {[&foundAnyEdge, &travelTime](auto from, auto to){
         // check all edge connections, if it's equal to 'to' then
-        for (auto& edge: from->edge){
+        for (auto& edge: from->edges){
             if (edge->nextStop == to){
                 edge->travelTime = travelTime;
                 foundAnyEdge = true;
@@ -374,10 +381,8 @@ std::shared_ptr<TransportNetwork::GraphNode> TransportNetwork::GetStation(
     if (stationIt == stations_.end()) {
         return nullptr;
     }
-
     return stationIt->second;
 }
-
 
 std::shared_ptr<TransportNetwork::LineInternal> TransportNetwork::GetLine(
     const Id& lineId
@@ -387,10 +392,9 @@ std::shared_ptr<TransportNetwork::LineInternal> TransportNetwork::GetLine(
     if (lineIt == lines_.end()) {
         return nullptr;
     }
-
-    // returns the second value of the unordered map, which is the shared pointer to line internal
     return lineIt->second;
 }
+
 
 std::shared_ptr<TransportNetwork::RouteInternal> TransportNetwork::GetRoute(
     const Id& lineId,

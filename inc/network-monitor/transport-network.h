@@ -304,9 +304,27 @@ private:
     std::unordered_map<Id, std::shared_ptr<GraphNode>> stations_ {};
     std::unordered_map<Id, std::shared_ptr<LineInternal>> lines_ {};
 
+    // Get station by ID.
+    std::shared_ptr<GraphNode> GetStation(
+        const Id& stationId
+    ) const;
 
+    // Get line by ID.
+    std::shared_ptr<LineInternal> GetLine(
+        const Id& lineId
+    ) const;
 
+    // Get route by ID.
+    std::shared_ptr<RouteInternal> GetRoute(
+        const Id& lineId,
+        const Id& routeId
+    ) const;
 
+    // This function adds a route to the internal line representation.
+    bool AddRouteToLine(
+        const Route& route,
+        const std::shared_ptr<LineInternal>& lineInternal
+    );
 
 };
 
