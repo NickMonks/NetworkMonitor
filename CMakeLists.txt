@@ -17,7 +17,6 @@ endif()
 # Once we linked the modules path to the Find*.cmake inside the build folder, we find the packages
 find_package(Boost 1.74 REQUIRED COMPONENTS system unit_test_framework)
 find_package(OpenSSL REQUIRED)
-find_package(Filesystem REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(CURL REQUIRED)
 
@@ -27,22 +26,19 @@ find_package(CURL REQUIRED)
 # test results are collected and presented together. CTest is the CMake utility that handles the test execution for us
 enable_testing()
 
-
-set(SOURCES 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
+# Static library
+set(LIB_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/file-downloader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/transport-network.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/websocket-client.cpp"
 )
-
-set(LIB_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/websocket-client.cpp"
-    )
 
 add_library(network-monitor STATIC ${LIB_SOURCES})
 
 # set C++14 as the requirement for both private and public interfaces.
 target_compile_features(network-monitor
     PUBLIC
-        cxx_std_14
+        cxx_std_17
 )
 
 #include the header files in the source folder
@@ -68,9 +64,10 @@ target_link_libraries(network-monitor
 
 #### TESTS
 set(TESTS_SOURCES
-        "${CMAKE_CURRENT_SOURCE_DIR}/test/websocket-client.cpp"
-        "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp"
-
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/file-downloader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/transport-network.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/websocket-client.cpp"
 )
 
 add_executable(network-monitor-tests ${TESTS_SOURCES})
@@ -82,9 +79,10 @@ target_compile_features(network-monitor-tests
 #To hardcode the cacert.pem location in the network-monitor-tests executable, modify the CMake 
 # network-monitor-tests target to define the path as a preprocessor symbol, TESTS_CACERT_PEM
 target_compile_definitions(network-monitor-tests
-    PRIVATE 
+    PRIVATE
+        TEST_DATA="${CMAKE_CURRENT_SOURCE_DIR}/test/test-data" 
         TESTS_CACERT_PEM="${CMAKE_CURRENT_SOURCE_DIR}/test/cacert.pem"
-        TESTS_NETWORK_LAYOUT_JSON="${CMAKE_CURRENT_SOURCE_DIR}/tests/network-layout.json"
+        TESTS_NETWORK_LAYOUT_JSON="${CMAKE_CURRENT_SOURCE_DIR}/test/network-layout.json"
 )
 
 target_link_libraries(network-monitor-tests
@@ -92,7 +90,6 @@ target_link_libraries(network-monitor-tests
         network-monitor
         Boost::Boost
         OpenSSL::OpenSSL
-        std::filesystem
 )
 
 #You can define a special build system target called test. 
