@@ -31,6 +31,8 @@ enable_testing()
 set(SOURCES 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/websocket-client.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/transport-network.cpp"
+
 )
 
 set(LIB_SOURCES
@@ -70,6 +72,7 @@ target_link_libraries(network-monitor
 set(TESTS_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/test/websocket-client.cpp"
         "${CMAKE_CURRENT_SOURCE_DIR}/test/main.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/transport-network.cpp"
 
 )
 
