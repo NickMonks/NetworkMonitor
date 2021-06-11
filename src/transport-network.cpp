@@ -173,22 +173,22 @@ bool TransportNetwork::RecordPassengerEvent(
     const PassengerEvent& event
 )
 {
-    // retrieve the station ID node of the event
+    // Find the station.
     const auto stationNode {GetStation(event.stationId)};
-
     if (stationNode == nullptr) {
         return false;
     }
 
-    // When the passenger is being detected, increase the passenger count at that station:
+    // Increase or decrease the passenger count at the station.
     switch (event.type) {
         case PassengerEvent::Type::In:
-            // increase passenger count post-increment (++x: first execute x, then add ++)
-            ++stationNode ->passengerCount;
+            ++stationNode->passengerCount;
+            return true;
         case PassengerEvent::Type::Out:
             --stationNode->passengerCount;
+            return true;
         default:
-        return false;
+            return false;
     }
 }
 
@@ -313,9 +313,9 @@ unsigned int TransportNetwork::GetTravelTime(
     const Id& stationB
 ) const
 {
-
-    const auto routeInternal {GetRoute(line,route)};
-    if (routeInternal == nullptr){
+    // Find the route.
+    const auto routeInternal {GetRoute(line, route)};
+    if (routeInternal == nullptr) {
         return 0;
     }
 
@@ -326,35 +326,34 @@ unsigned int TransportNetwork::GetTravelTime(
         return 0;
     }
 
-    //Walk the route looking for station A
+    // Walk the route looking for station A.
     unsigned int travelTime {0};
-
     bool foundA {false};
-
-    for (const auto& stop: routeInternal->stops){
+    for (const auto& stop: routeInternal->stops) {
+        // If we found station A, we start counting.
         if (stop == stationANode) {
             foundA = true;
         }
 
-        if (stop == stationBNode){
+        // If we found station B, we return the cumulative travel time so far.
+        if (stop == stationBNode) {
             return travelTime;
         }
 
-        //Accumulate the travel time since we found station A
+        // Accummulate the travel time since we found station A..
         if (foundA) {
             auto edgeIt {stop->FindEdgeForRoute(routeInternal)};
-            if (edgeIt == stop->edges.end()){
+            if (edgeIt == stop->edges.end()) {
+                // Unexpected: The station should definitely have an edge for
+                //             this route.
                 return 0;
             }
-
-            // Note that edgeIt is a pointer to a pointer type
-            // specifically edgeIt is a vector of pointers of several edges
             travelTime += (*edgeIt)->travelTime;
         }
+    }
 
-        // If we got here, we didn't find station A, B, or both.
-        return 0;
-    } 
+    // If we got here, we didn't find station A, B, or both.
+    return 0;
 }
 
 std::vector<

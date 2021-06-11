@@ -90,6 +90,7 @@ target_link_libraries(network-monitor-tests
         network-monitor
         Boost::Boost
         OpenSSL::OpenSSL
+        CURL::CURL
 )
 
 #You can define a special build system target called test. 
