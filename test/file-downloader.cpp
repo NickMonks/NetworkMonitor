@@ -17,6 +17,7 @@ BOOST_AUTO_TEST_CASE(file_downloader)
     const std::string fileUrl {
         "https://ltnm.learncppthroughprojects.com/network-layout.json"
     };
+
     const auto destination {
         std::filesystem::temp_directory_path() / "network-layout.json"
     };

@@ -1,64 +1,65 @@
 #include <network-monitor/file-downloader.h>
 
-#include <boost/asio.hpp>
-#include <boost/test/unit_test.hpp>
+#include <nlohmann/json.hpp>
+
+#include <curl/curl.h>
 
 #include <filesystem>
 #include <fstream>
+#include <stdio.h>
 #include <string>
 
-using NetworkMonitor::DownloadFile;
-using NetworkMonitor::ParseJsonFile;
-
-BOOST_AUTO_TEST_SUITE(network_monitor);
-
-BOOST_AUTO_TEST_CASE(file_downloader)
+bool NetworkMonitor::DownloadFile(
+    const std::string& fileUrl,
+    const std::filesystem::path& destination,
+    const std::filesystem::path& caCertFile
+)
 {
-    const std::string fileUrl {
-        "https://ltnm.learncppthroughprojects.com/network-layout.json"
-    };
-    const auto destination {
-        std::filesystem::temp_directory_path() / "network-layout.json"
-    };
-
-    // Download the file.
-    bool downloaded {DownloadFile(fileUrl, destination, TESTS_CACERT_PEM)};
-    BOOST_CHECK(downloaded);
-    BOOST_CHECK(std::filesystem::exists(destination));
-
-    // Check the content of the file.
-    // We cannot check the whole file content as it changes over time, but we
-    // can at least check some expected file properties.
-    {
-        const std::string expectedString {"\"stations\": ["};
-        std::ifstream file {destination};
-        std::string line {};
-        bool foundExpectedString {false};
-        while (std::getline(file, line)) {
-            if (line.find(expectedString) != std::string::npos) {
-                foundExpectedString = true;
-                break;
-            }
-        }
-        BOOST_CHECK(foundExpectedString);
+    // Initalize curl.
+    CURL* curl {curl_easy_init()};
+    if (curl == nullptr) {
+        return false;
     }
 
-    // Clean up.
-    std::filesystem::remove(destination);
+    // Open the file.
+    std::FILE* fp {fopen(destination.string().c_str(), "wb")};
+    if (fp == nullptr) {
+        // Remember to clean up in all program paths.
+        curl_easy_cleanup(curl);
+        return false;
+    }
+
+    // Configure curl.
+    curl_easy_setopt(curl, CURLOPT_URL, fileUrl.c_str());
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_CAINFO, caCertFile.string().c_str());
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+
+    // Perform the request.
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    // Close the file.
+    fclose(fp);
+
+    return res == CURLE_OK;
 }
 
-BOOST_AUTO_TEST_CASE(parse_file)
+nlohmann::json NetworkMonitor::ParseJsonFile(
+    const std::filesystem::path& source
+)
 {
-    // Parse the file.
-    const std::filesystem::path sourceFile {TESTS_NETWORK_LAYOUT_JSON};
-    auto parsed = ParseJsonFile(sourceFile);
-    BOOST_CHECK(parsed.is_object());
-    BOOST_CHECK(parsed.contains("lines"));
-    BOOST_CHECK(parsed.at("lines").size() > 0);
-    BOOST_CHECK(parsed.contains("stations"));
-    BOOST_CHECK(parsed.at("stations").size() > 0);
-    BOOST_CHECK(parsed.contains("travel_times"));
-    BOOST_CHECK(parsed.at("travel_times").size() > 0);
+    nlohmann::json parsed {};
+    if (!std::filesystem::exists(source)) {
+        return parsed;
+    }
+    try {
+        std::ifstream file {source};
+        file >> parsed;
+    } catch (...) {
+        // Will return an empty object.
+    }
+    return parsed;
 }
-
-BOOST_AUTO_TEST_SUITE_END();
